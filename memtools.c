@@ -25,6 +25,7 @@ typedef struct{
   char* comment, *file, *alloc_type;
 }memtools_memory_allocation;
 
+size_t total_allocated_bytes = 0;
 unsigned int n_allocations = 0;
 memtools_memory_allocation* memory_allocations = NULL;
 pthread_mutex_t memory_allocations_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -83,6 +84,7 @@ void* memtools_malloc(size_t n, unsigned int line, char* file){
   curr->alloc_type = ALLOC_TYPE_MALLOC;
   curr->comment = NULL;
   over_malloc(n, curr);
+  total_allocated_bytes += n;
   pthread_mutex_unlock(&memory_allocations_lock);
 
   return curr->memstart;
@@ -152,6 +154,7 @@ static void print_allocation(memtools_memory_allocation* allocation){
 /* print all allocations */
 void memtools_print_allocated(){
   pthread_mutex_lock(&memory_allocations_lock);
+  print_wrapped("allocated %llu bytes in %d blocks\n", total_allocated_bytes, n_allocations);
   memtools_memory_allocation* curr = memory_allocations;
   if(!curr){
     return;
@@ -182,6 +185,11 @@ void memtools_free(void* ptr, unsigned line, char* file){
     exit(0);
   }
 
+  if(ptr != curr->memstart){
+    print_wrapped("warning - you are freeing allocation at %p in file %s at line %d using shifted pointer %p\n", 
+                  curr->memstart - sizeof(uint64_t), file, line, ptr);
+  }
+  total_allocated_bytes -= curr->n;
   free(curr->memstart - sizeof(uint64_t));
   if(curr->comment){
     free(curr->comment);
@@ -215,6 +223,7 @@ void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
     exit(0);
   }
 
+  total_allocated_bytes = total_allocated_bytes - curr->n + n;
   over_realloc(n, curr);
   curr->line = line;
   curr->file = file;

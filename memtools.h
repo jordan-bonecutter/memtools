@@ -20,7 +20,7 @@ void  memtools_free(void* ptr, unsigned int line, char* file); /* Version of fre
 void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file); /* Version of realloc which keeps track of line and file where memory was reallocated */
 
 void memtools_print_allocated(); /* print all currently allocated memory */
-bool memtools_has_memory_been_violated(void* ptr, unsigned int line, char* file); /* check if any over allocated segments are corrupted */
+bool memtools_has_memory_been_violated(void* ptr); /* check if any over allocated segments are corrupted */
 bool memtools_memory_comment(void* ptr, char* comment); /* add comment to memory */
 bool memtools_is_valid_pointer(void* ptr); /* check if pointer is valid */
 
@@ -38,6 +38,15 @@ bool memtools_is_valid_pointer(void* ptr); /* check if pointer is valid */
                                           __FILE__, __LINE__);\
                                  } else {\
                                     printf("memtools: memory tested in file %s at line %d was invalid.\n", \
+                                           __FILE__, __LINE__);\
+                                 } if(comment){\
+                                      printf("\t(%s)\n", comment);\
+                                 }
+    #define memviolated(p, comment) if(!memtools_has_memory_been_violated(p)){\
+                                    printf("memtools: memory tested in file %s at line %d has not been violated.\n",\
+                                          __FILE__, __LINE__);\
+                                 } else {\
+                                    printf("memtools: memory tested in file %s at line %d has been violated.\n", \
                                            __FILE__, __LINE__);\
                                  } if(comment){\
                                       printf("\t(%s)\n", comment);\

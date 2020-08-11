@@ -16,6 +16,7 @@ int main(){
   data1 = malloc((sizeof *data1)*1000);
   data1[0] = 1;
   memcomment(data1, "this is a pointer that points to 1000 integer values. wow, very cool!");
+  memviolated(data1, "This memory has not been violated");
 
   data2 = malloc((sizeof *data2)*100);
   strncpy(data2, "hello world!", 100);
@@ -27,6 +28,7 @@ int main(){
   data3 = malloc((sizeof *data3)*10);
   data3[10] = 0;
   memcomment(data3, "Purposefully violating memory LIKE A BOSS");
+  memviolated(data3, "I purposely violated this memory!");
 
   data2 = realloc(data2, ((sizeof *data2)*50));
 
@@ -34,6 +36,7 @@ int main(){
   free(data1);
   free(data2);
   free(data3);
+  memprint();
 
   return 0;
 }
