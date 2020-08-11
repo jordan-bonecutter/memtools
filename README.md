@@ -1,5 +1,5 @@
 # memtools
-##Responsibly allocating memory in C
+## Responsibly allocating memory in C
 
 Let's face it, everybody hates using `malloc()` and `free()`. That's why I started working on memtools, to make it easier!
 To use memtools, you need only to include the header file `memtools.h` and link with `memtools.o`. I'll show you how memtools can help you!
