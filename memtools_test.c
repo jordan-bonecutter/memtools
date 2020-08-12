@@ -7,6 +7,7 @@
 #include "memtools.h"
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 int main(){
   int* data1;
@@ -19,6 +20,7 @@ int main(){
   memviolated(data1, "This memory has not been violated");
 
   data2 = malloc((sizeof *data2)*100);
+  memcomment(data2, "I allocated this data at %d", (int)clock());
   strncpy(data2, "hello world!", 100);
   
   memtest(NULL, "This should fail, I'm testing NULL");

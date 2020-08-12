@@ -90,10 +90,14 @@ void* memtools_malloc(size_t n, unsigned int line, char* file){
   return curr->memstart;
 }
 
+#define MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE 1000
+
 /* add a comment to current memory allocation */
-void memtools_memory_comment(void* ptr, char* comment){
+void memtools_memory_comment(void* ptr, char* fmt, ...){
   memtools_memory_allocation* curr; 
   int n;
+  char *buffer;
+  va_list args1, args2;
 
   pthread_mutex_lock(&memory_allocations_lock);
   curr = get_allocation_for_pointer(ptr);
@@ -102,9 +106,18 @@ void memtools_memory_comment(void* ptr, char* comment){
     exit(0);
   }
 
-  n = strlen(comment) + 1;
-  curr->comment = malloc((sizeof *curr->comment)*n);
-  strncpy(curr->comment, comment, n);
+  /* use vsnprintf to get formatted string from user */
+  buffer = malloc((sizeof *buffer)*MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE);
+  va_start(args1, fmt);
+  va_copy(args2, args1);
+  n = vsnprintf(buffer, MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE*(sizeof *buffer), fmt, args1);
+  va_end(args1);
+  if(n > MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE){
+    buffer = realloc(buffer, (sizeof *buffer)*(n+1));
+    vsnprintf(buffer, n+1, fmt, args2);
+  }
+  va_end(args2);
+  curr->comment = buffer;
   pthread_mutex_unlock(&memory_allocations_lock);
 }
 

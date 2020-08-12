@@ -20,7 +20,7 @@
     #define realloc(p, n) memtools_realloc(p, n, __LINE__, (char*)__FILE__)
 
     #define memprint()           memtools_print_allocated()
-    #define memcomment(p, c)     memtools_memory_comment(p, c)
+    #define memcomment(p, ...)   memtools_memory_comment(p, __VA_ARGS__)
     #define memtest(p, ...)  if(!memtools_is_valid_pointer(p)){\
                                     printf("memtools: memory tested in file %s at line %d was invalid.\n\t", \
                                             __FILE__, __LINE__);\
@@ -36,7 +36,7 @@
                                  } 
   #else
     #define memprint()
-    #define memcomment(p, c)
+    #define memcomment(p, ...)
     #define memtest(p, format, ...)
     #define memviolated(p, format, ...) 
   #endif
