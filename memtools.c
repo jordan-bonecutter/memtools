@@ -15,6 +15,7 @@
 
 #define MAGIC_NUMBER 0xEC5EE674CA4A4A96
 #define MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE 1000
+#define MEMTOOLS_WPRINTF_BUFFER_SIZE        1000
 
 char ALLOC_TYPE_MALLOC[]  = "malloc ";
 char ALLOC_TYPE_REALLOC[] = "realloc";
@@ -112,7 +113,7 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
   n = vsnprintf(buffer, MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE*(sizeof *buffer), fmt, args1);
   va_end(args1);
   buffer = realloc(buffer, (sizeof *buffer)*(n+1));
-  if(n > MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE){
+  if(n+1 > MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE){
     vsnprintf(buffer, n+1, fmt, args2);
   }
   va_end(args2);
@@ -242,5 +243,33 @@ void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
   curr->alloc_type = ALLOC_TYPE_REALLOC;
   pthread_mutex_unlock(&memory_allocations_lock);
   return curr->memstart;
+}
+
+/* append a tab to nonempty printf statements */
+int memtools_wrapped_printf(char* fmt, ...){
+  char* buffer;
+  va_list args1, args2;
+  int n;
+
+  va_start(args1, fmt);
+  va_copy(args2, args1);
+
+  buffer = malloc((sizeof *buffer)*MEMTOOLS_WPRINTF_BUFFER_SIZE);
+  n = vsnprintf(buffer, MEMTOOLS_WPRINTF_BUFFER_SIZE, fmt, args1);
+  va_end(args1);
+  if(n == 0){
+    va_end(args2);
+    free(buffer);
+    return 0;
+  } 
+
+  if(n+1 > MEMTOOLS_WPRINTF_BUFFER_SIZE){
+    buffer = realloc(buffer, (sizeof *buffer)*(n+1));
+    vsnprintf(buffer, n+1, fmt, args2);
+  }
+  va_end(args2);
+  n = printf("\t%s\n", buffer);
+  free(buffer);
+  return n;
 }
 

@@ -22,5 +22,7 @@ bool memtools_has_memory_been_violated(void* ptr); /* check if any over allocate
 bool memtools_memory_comment(void* ptr, char* fmt, ...); /* add comment to memory */
 bool memtools_is_valid_pointer(void* ptr); /* check if pointer is valid */
 
+int memtools_wrapped_printf(char* fmt, ...);
+
 #endif
 
