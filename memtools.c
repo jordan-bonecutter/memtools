@@ -133,6 +133,9 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
     vsnprintf(buffer, n+1, fmt, args2);
   }
   va_end(args2);
+  if(curr->comment){
+    free(curr->comment);
+  }
   curr->comment = buffer;
   pthread_mutex_unlock(&memory_allocations_lock);
 }
