@@ -12,11 +12,11 @@ When you switch off the `MEMTOOLS` macro, all of the tools disappear and the wra
 The memtools philospphy is that all of its tools should *NOT* affect the logic of your program. This means all the tools can be though of as `void` returning 
 functions. This may seem like a strange decision, as at first glance the following statement seems quite powerful:
 ```c
-        if(pointer_is_valid(ptr)){
-            dereference_my_pointer(ptr);
-        } else {
-            try_to_fix_bad_pointer(ptr);
-        }
+if(pointer_is_valid(ptr)){
+        dereference_my_pointer(ptr);
+} else {
+        try_to_fix_bad_pointer(ptr);
+}
 ```        
 While memtools could indeed provide the above functionality (and does if you want to dig deep into the weeds), this would be catastrophic for the development 
 process, only creating further headaches. memtools is not built like this because it is better to fix code at compile time rather than at run time. This means 
@@ -36,25 +36,25 @@ is violated) it certainly is helpful.
 
 Now that we know about all of the tools, let's look at an example usage:
 ```c
-        #include <memtools.h>
-        #include <stdlib.h>
+#include <memtools.h>
+#include <stdlib.h>
         
-        int main(int argc, const char** argv){
-            int *array, N, *head;
+int main(int argc, const char** argv){
+        int *array, N, *head;
             
-            N = atoi(argv[1]);
+        N = atoi(argv[1]);
             
-            array = malloc((sizeof *array)*N);
-            memcomment(array, "This is my array with %d integers", N);
+        array = malloc((sizeof *array)*N);
+        memcomment(array, "This is my array with %d integers", N);
             
-            for(head = array; head != array + N; ++head){
-                memtest(head, "Checking head pointer on %d iteration", (head - array)/(sizeof *array));
-                *head = rand();
-            }
-            
-            free(array);
-            memprint();
+        for(head = array; head != array + N; ++head){
+            memtest(head, "Checking head pointer on %d iteration", (head - array)/(sizeof *array));
+            *head = rand();
         }
+            
+        free(array);
+        memprint();
+}
 ```        
 A few comments on this code. First, you can see that memcomment not only allows string literals, but also `printf` style formattable strings which is quite handy!
 Second, I like to use memtest on every pointer dereference in my code. This allows an extremely fine granularity on where exactly I caused a segfault. Finally, I
