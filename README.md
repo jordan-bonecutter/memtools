@@ -11,13 +11,13 @@ When you switch off the `MEMTOOLS` macro, all of the tools disappear and the wra
 
 The memtools philospphy is that all of its tools should *NOT* affect the logic of your program. This means all the tools can be though of as `void` returning 
 functions. This may seem like a strange decision, as at first glance the following statement seems quite powerful:
-
+```c
         if(pointer_is_valid(ptr)){
             dereference_my_pointer(ptr);
         } else {
             try_to_fix_bad_pointer(ptr);
         }
-        
+```        
 While memtools could indeed provide the above functionality (and does if you want to dig deep into the weeds), this would be catastrophic for the development 
 process, only creating further headaches. memtools is not built like this because it is better to fix code at compile time rather than at run time. This means 
 that writing code trying to fix other code is a terrible idea, and you really shouldn't do it. The other reason is that you want to be able to turn off memtools 
@@ -35,7 +35,7 @@ this block has been 'violated'. While this isn't a catch-all solution (it's poss
 is violated) it certainly is helpful.
 
 Now that we know about all of the tools, let's look at an example usage:
-
+```c
         #include <memtools.h>
         #include <stdlib.h>
         
@@ -55,7 +55,7 @@ Now that we know about all of the tools, let's look at an example usage:
             free(array);
             memprint();
         }
-        
+```        
 A few comments on this code. First, you can see that memcomment not only allows string literals, but also `printf` style formattable strings which is quite handy!
 Second, I like to use memtest on every pointer dereference in my code. This allows an extremely fine granularity on where exactly I caused a segfault. Finally, I
 like to end the program with a call to memprint() when I know that all of my memory should be deallocated. If it doesn't report 0 bytes in 0 blocks, then I know
