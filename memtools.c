@@ -14,6 +14,7 @@
 #include <stdarg.h>
 
 #define MAGIC_NUMBER 0xEC5EE674CA4A4A96
+#define MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE 1000
 
 char ALLOC_TYPE_MALLOC[]  = "malloc ";
 char ALLOC_TYPE_REALLOC[] = "realloc";
@@ -89,8 +90,6 @@ void* memtools_malloc(size_t n, unsigned int line, char* file){
 
   return curr->memstart;
 }
-
-#define MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE 1000
 
 /* add a comment to current memory allocation */
 void memtools_memory_comment(void* ptr, char* fmt, ...){

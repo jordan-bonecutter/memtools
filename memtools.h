@@ -12,8 +12,8 @@
 
 #ifndef MEMTOOLS_H_INCLUDE_GUARD
   #define MEMTOOLS_H_INCLUDE_GUARD
+  #include "memtools_internal.h"
   #ifdef MEMTOOLS
-    #include "memtools_internal.h"
 
     #define malloc(n)     memtools_malloc (n, __LINE__, (char*)__FILE__)
     #define free(p)       memtools_free   (p, __LINE__, (char*)__FILE__)
