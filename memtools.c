@@ -27,11 +27,16 @@ typedef struct{
   char* comment, *file, *alloc_type;
 }memtools_memory_allocation;
 
+/* allocated memory data structure */
+/* TODO: convert this to a binary tree for fatser lookup */
 size_t total_allocated_bytes = 0;
 unsigned int n_allocations = 0;
 memtools_memory_allocation* memory_allocations = NULL;
+
+/* mutex lock for multithreaded applications */
 pthread_mutex_t memory_allocations_lock = PTHREAD_MUTEX_INITIALIZER;
 
+/* print memtools before formatted string */
 void print_wrapped(const char* format, ...){
   printf("memtools: ");
   va_list args;
@@ -65,10 +70,12 @@ static memtools_memory_allocation* get_allocation_for_pointer(void* ptr){
 
 /* malloc w/ 64 bit header and footer */
 static inline void over_malloc(size_t n, memtools_memory_allocation* curr){
+  /* ensure footer is 64-bit aligned */
   unsigned long aligned_n = n + (n&7);
   curr->memstart = malloc(aligned_n + sizeof(uint64_t)*2) + sizeof(uint64_t);
   curr->n = n;
 
+  /* write magic number to header and footer */
   *(((uint64_t*)curr->memstart) - 1) = MAGIC_NUMBER;
   *((uint64_t*)(curr->memstart + aligned_n)) = MAGIC_NUMBER;
 }
@@ -76,11 +83,13 @@ static inline void over_malloc(size_t n, memtools_memory_allocation* curr){
 /* memtools version of malloc */
 void* memtools_malloc(size_t n, unsigned int line, char* file){
   pthread_mutex_lock(&memory_allocations_lock);
+
+  /* add more memory for new malloc */
   ++n_allocations;
   memory_allocations = realloc(memory_allocations, (sizeof *memory_allocations)*n_allocations);
-
   memtools_memory_allocation* curr = memory_allocations + n_allocations - 1;
 
+  /* initialize current allocation */
   curr->line = line;
   curr->file = file;
   curr->alloc_type = ALLOC_TYPE_MALLOC;
@@ -106,13 +115,20 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
     exit(0);
   }
 
-  /* use vsnprintf to get formatted string from user */
-  buffer = malloc((sizeof *buffer)*MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE);
+  /* nitialize 2 va_list in case we need to call vsnprintf again if
+   * the buffer is too small */
   va_start(args1, fmt);
   va_copy(args2, args1);
+
+  /* use vsnprintf to get formatted string from user */
+  buffer = malloc((sizeof *buffer)*MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE);
   n = vsnprintf(buffer, MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE*(sizeof *buffer), fmt, args1);
   va_end(args1);
+
+  /* always makes sense to realloc so we're not over allocating */
   buffer = realloc(buffer, (sizeof *buffer)*(n+1));
+
+  /* if the buffer was initally too small, try vsnprintf again */
   if(n+1 > MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE){
     vsnprintf(buffer, n+1, fmt, args2);
   }
@@ -129,6 +145,9 @@ bool memtools_is_valid_pointer(void* ptr){
   curr = get_allocation_for_pointer(ptr);
   pthread_mutex_unlock(&memory_allocations_lock);
 
+  /* curr will either be NULL or non-null. If it's NULL 
+   * then (bool) curr = false, otherwise it's true which
+   * is exactly what we want. */
   return (bool)curr;
 }
 
@@ -186,6 +205,8 @@ void memtools_free(void* ptr, unsigned line, char* file){
   pthread_mutex_lock(&memory_allocations_lock);
 
   assert(ptr);
+  /* we can't use get_allocation_for pointer because we need 
+   * the block index to erase the block from the array. */
   for(i = 0, curr = memory_allocations; curr != memory_allocations + n_allocations; ++curr, ++i){
     if(pointer_contained_in_allocation(curr, ptr)){
       is_valid_ptr = true;
@@ -207,6 +228,8 @@ void memtools_free(void* ptr, unsigned line, char* file){
   if(curr->comment){
     free(curr->comment);
   }
+
+  /* erase free'd block by shifting down all the next allocations */
   for(; i < n_allocations-1; ++i){
     memory_allocations[i] = memory_allocations[i+1];
   }
@@ -228,6 +251,17 @@ static inline void over_realloc(size_t n, memtools_memory_allocation* curr){
 /* memtools version of realloc */
 void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
   memtools_memory_allocation* curr; 
+
+  /* since you can use realloc as malloc if ptr is
+   * NULL, we'll just use malloc for that. The only 
+   * minor issue w/ this is that memtools will report
+   * the allocation as a malloc rather than a realloc
+   * but this actually makes some sense as it's not 
+   * actually reallocating memory so I think I won't
+   * fix this 'bug' */
+  if(!ptr){
+    return memtools_malloc(n, line, file);
+  }
 
   pthread_mutex_lock(&memory_allocations_lock);
   curr = get_allocation_for_pointer(ptr);
@@ -254,15 +288,21 @@ int memtools_wrapped_printf(char* fmt, ...){
   va_start(args1, fmt);
   va_copy(args2, args1);
 
+  /* see how long buffer is */
   buffer = malloc((sizeof *buffer)*MEMTOOLS_WPRINTF_BUFFER_SIZE);
   n = vsnprintf(buffer, MEMTOOLS_WPRINTF_BUFFER_SIZE, fmt, args1);
   va_end(args1);
+
+  /* if there's nothing to print, don't bother printing 
+   * a tab or a newline as that will muck with the formatting */
   if(n == 0){
     va_end(args2);
     free(buffer);
     return 0;
   } 
 
+  /* otherwise, make sure we captured the whole thing in buffer
+   * so that we can print it all */
   if(n+1 > MEMTOOLS_WPRINTF_BUFFER_SIZE){
     buffer = realloc(buffer, (sizeof *buffer)*(n+1));
     vsnprintf(buffer, n+1, fmt, args2);
