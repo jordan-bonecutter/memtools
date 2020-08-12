@@ -139,8 +139,8 @@ bool memtools_has_memory_been_violated(void* ptr){
 
 /* print memtools_memory_allocation struct */
 static void print_allocation(memtools_memory_allocation* allocation){
-  print_wrapped("%s:(%p, %p) allocated in file %s at line %d\n", 
-        allocation->alloc_type, allocation->memstart, allocation->memstart + allocation->n,
+  print_wrapped("%s:%zu bytes allocated at %p allocated in file %s at line %d\n", 
+        allocation->alloc_type, allocation->n, allocation->memstart + allocation->n,
         allocation->file, allocation->line);
 
   if(allocation_has_been_violated(allocation)){
