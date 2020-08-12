@@ -112,8 +112,8 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
   va_copy(args2, args1);
   n = vsnprintf(buffer, MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE*(sizeof *buffer), fmt, args1);
   va_end(args1);
+  buffer = realloc(buffer, (sizeof *buffer)*(n+1));
   if(n > MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE){
-    buffer = realloc(buffer, (sizeof *buffer)*(n+1));
     vsnprintf(buffer, n+1, fmt, args2);
   }
   va_end(args2);
