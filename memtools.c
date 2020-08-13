@@ -191,7 +191,7 @@ static void print_allocation(memtools_memory_allocation* allocation){
 /* print all allocations */
 void memtools_print_allocated(){
   pthread_mutex_lock(&memory_allocations_lock);
-  print_wrapped("allocated %llu bytes in %d blocks\n", total_allocated_bytes, n_allocations);
+  print_wrapped("allocated %zu bytes in %d blocks\n", total_allocated_bytes, n_allocations);
   memtools_memory_allocation* curr = memory_allocations;
   if(!curr){
     return;
