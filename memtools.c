@@ -24,7 +24,8 @@ typedef struct{
   unsigned int line;
   uint8_t* memstart;
   size_t n;
-  char* comment, *file, *alloc_type;
+  char **comments, *file, *alloc_type;
+  unsigned int n_comments;
 }memtools_memory_allocation;
 
 /* allocated memory data structure */
@@ -93,7 +94,8 @@ void* memtools_malloc(size_t n, unsigned int line, char* file){
   curr->line = line;
   curr->file = file;
   curr->alloc_type = ALLOC_TYPE_MALLOC;
-  curr->comment = NULL;
+  curr->comments = NULL;
+  curr->n_comments = 0;
   over_malloc(n, curr);
   total_allocated_bytes += n;
   pthread_mutex_unlock(&memory_allocations_lock);
@@ -133,10 +135,9 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
     vsnprintf(buffer, n+1, fmt, args2);
   }
   va_end(args2);
-  if(curr->comment){
-    free(curr->comment);
-  }
-  curr->comment = buffer;
+  curr->n_comments++;
+  curr->comments = realloc(curr->comments, (sizeof *curr->comments)*curr->n_comments);
+  curr->comments[curr->n_comments - 1] = buffer;
   pthread_mutex_unlock(&memory_allocations_lock);
 }
 
@@ -174,6 +175,7 @@ bool memtools_has_memory_been_violated(void* ptr){
 
 /* print memtools_memory_allocation struct */
 static void print_allocation(memtools_memory_allocation* allocation){
+  char** comment;
   print_wrapped("%s:%zu bytes allocated at %p allocated in file %s at line %d\n", 
         allocation->alloc_type, allocation->n, allocation->memstart + allocation->n,
         allocation->file, allocation->line);
@@ -181,8 +183,8 @@ static void print_allocation(memtools_memory_allocation* allocation){
   if(allocation_has_been_violated(allocation)){
     printf("\t %s! MEMORY HAS BEEN VIOLATED !%s\n", "\033[31m", "\033[0m");
   }
-  if(allocation->comment){
-    printf("\t(%s)\n", allocation->comment);
+  for(comment = allocation->comments; comment != allocation->comments + allocation->n_comments; ++comment){
+    printf("\t(%s)\n", *comment);
   }
 }
 
@@ -204,6 +206,7 @@ void memtools_free(void* ptr, unsigned line, char* file){
   memtools_memory_allocation* curr; 
   int i;
   bool is_valid_ptr = false;
+  char **comment;
 
   pthread_mutex_lock(&memory_allocations_lock);
 
@@ -228,8 +231,12 @@ void memtools_free(void* ptr, unsigned line, char* file){
   }
   total_allocated_bytes -= curr->n;
   free(curr->memstart - sizeof(uint64_t));
-  if(curr->comment){
-    free(curr->comment);
+   
+  for(comment = curr->comments; comment != curr->comments + curr->n_comments; ++comment){
+    free(*comment);
+  }
+  if(curr->comments){
+    free(curr->comments);
   }
 
   /* erase free'd block by shifting down all the next allocations */
@@ -314,5 +321,42 @@ int memtools_wrapped_printf(char* fmt, ...){
   n = printf("\t%s\n", buffer);
   free(buffer);
   return n;
+}
+
+static void comment_copy(char **dest, char *src){
+  unsigned int n;
+
+  n = strlen(src);
+  *dest = malloc((sizeof **dest)*(n+1));
+  strncpy(*dest, src, n);
+}
+
+void memtools_memory_comment_copy(void* dest_block, void* src_block){
+  memtools_memory_allocation *dest_allocation, *src_allocation;
+  int n_original_comments;
+  char **dest_comment, **src_comment;
+
+  src_allocation = get_allocation_for_pointer(src_block);
+  if(!src_allocation){
+    print_wrapped("Tried to copy comments from pointer at %p but pointer was invalid.\n", src_block);
+    exit(0);
+  }
+
+  dest_allocation = get_allocation_for_pointer(dest_block);
+  if(!dest_allocation){
+    print_wrapped("Tried to copy comments from pointer at %p to pointer at %p but destination pointer was invalid.\n", 
+                  src_block, dest_block);
+    exit(0);
+  }
+
+  n_original_comments = dest_allocation->n_comments;
+  dest_allocation->n_comments += src_allocation->n_comments;
+  dest_allocation->comments = realloc(dest_allocation->comments, 
+                                      (sizeof *dest_allocation->comments)*dest_allocation->n_comments);
+  for(src_comment = src_allocation->comments, dest_comment = dest_allocation->comments + n_original_comments;
+      src_comment != src_allocation->comments + src_allocation->n_comments;
+      ++src_comment, ++dest_comment){
+    comment_copy(dest_comment, *src_comment);
+  }
 }
 

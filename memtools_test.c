@@ -17,14 +17,14 @@ int main(){
   data1 = malloc((sizeof *data1)*1000);
   data1[0] = 1;
   memcomment(data1, "this is a pointer that points to 1000 integer values. wow, very cool!");
+  memcomment(data1, "another comment guys!");
   memviolated(data1, "This memory has not been violated");
 
   data2 = malloc((sizeof *data2)*100);
   memcomment(data2, "I allocated this data at %d", (int)clock());
   strncpy(data2, "hello world!", 100);
   
-  //memtest(NULL, "This should fail, I'm testing NULL");
-  memtest(NULL, "");
+  memtest(NULL, "This should fail, I'm testing NULL");
 
   memtest(data2 + 3, "This shouldn't fail, I'm testing allocated memory");
 

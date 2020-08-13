@@ -21,6 +21,7 @@
 
     #define memprint()           memtools_print_allocated()
     #define memcomment(p, ...)   memtools_memory_comment(p, __VA_ARGS__)
+    #define memcomment_copy(dest, src) memtools_memory_comment_copy(dest, src)
     #define memtest(p, ...)  if(!memtools_is_valid_pointer(p)){\
                                printf("memtools: memory tested at %p in file %s at line %d was invalid.\n", \
                                       p, __FILE__, __LINE__);\
@@ -35,6 +36,7 @@
   #else
     #define memprint()
     #define memcomment(p, ...)
+    #define memcomment_copy(dest, src)
     #define memtest(p, format, ...)
     #define memviolated(p, format, ...) 
   #endif
