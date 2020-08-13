@@ -16,7 +16,7 @@ functions. This may seem like a strange decision, as at first glance the followi
 if(pointer_is_valid(ptr)){
         dereference_my_pointer(ptr);
 } else {
-        try_to_fix_bad_pointer(ptr);
+        try_to_fix_bad_pointer(&ptr);
 }
 ```        
 While memtools could indeed provide the above functionality (and does if you want to dig deep into the weeds), this would be catastrophic for the development 
