@@ -328,7 +328,7 @@ static void comment_copy(char **dest, char *src){
 
   n = strlen(src);
   *dest = malloc((sizeof **dest)*(n+1));
-  strncpy(*dest, src, n);
+  strncpy(*dest, src, n+1);
 }
 
 void memtools_memory_comment_copy(void* dest_block, void* src_block){
