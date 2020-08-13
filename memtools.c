@@ -194,6 +194,7 @@ void memtools_print_allocated(){
   print_wrapped("allocated %zu bytes in %d blocks\n", total_allocated_bytes, n_allocations);
   memtools_memory_allocation* curr = memory_allocations;
   if(!curr){
+    pthread_mutex_unlock(&memory_allocations_lock);
     return;
   }
   for(; curr != memory_allocations + n_allocations; print_allocation(curr++));
@@ -208,9 +209,11 @@ void memtools_free(void* ptr, unsigned line, char* file){
   bool is_valid_ptr = false;
   char **comment;
 
-  pthread_mutex_lock(&memory_allocations_lock);
+  if(!ptr){
+    return;    
+  }
 
-  assert(ptr);
+  pthread_mutex_lock(&memory_allocations_lock);
   /* we can't use get_allocation_for pointer because we need 
    * the block index to erase the block from the array. */
   for(i = 0, curr = memory_allocations; curr != memory_allocations + n_allocations; ++curr, ++i){
