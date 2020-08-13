@@ -12,6 +12,7 @@ When you switch off the `MEMTOOLS` macro, all of the tools disappear and the wra
 The memtools philospphy is that all of its tools should *NOT* affect the logic of your program. This means all the tools can be though of as `void` returning 
 functions. This may seem like a strange decision, as at first glance the following statement seems quite powerful:
 ```c
+/* DO NOT DO THIS, THIS IS BAD!!! */
 if(pointer_is_valid(ptr)){
         dereference_my_pointer(ptr);
 } else {
