@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
+#include "memtools_memory_interface.h"
 
 #define MAGIC_NUMBER 0xEC5EE674CA4A4A96
 #define MEMTOOLS_MEMORY_COMMENT_BUFFER_SIZE 1000
@@ -20,19 +21,11 @@
 char ALLOC_TYPE_MALLOC[]  = "malloc ";
 char ALLOC_TYPE_REALLOC[] = "realloc";
 
-typedef struct{
-  unsigned int line;
-  uint8_t* memstart;
-  size_t n;
-  char **comments, *file, *alloc_type;
-  unsigned int n_comments;
-}memtools_memory_allocation;
-
 /* allocated memory data structure */
 /* TODO: convert this to a binary tree for fatser lookup */
 size_t total_allocated_bytes = 0;
 unsigned int n_allocations = 0;
-memtools_memory_allocation* memory_allocations = NULL;
+memtools_memory_interface* memory_interface = NULL;
 
 /* mutex lock for multithreaded applications */
 pthread_mutex_t memory_allocations_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -47,38 +40,8 @@ void print_wrapped(const char* format, ...){
 }
 
 /* check if allocation has been violated by looking at header and footer */
-static bool allocation_has_been_violated(memtools_memory_allocation* allocation){
+static bool allocation_has_been_violated(memtools_allocation* allocation){
   return *((uint64_t*)(allocation->memstart + allocation->n + (allocation->n&0x7))) != MAGIC_NUMBER || *(((uint64_t*)allocation->memstart)-1) != MAGIC_NUMBER;
-}
-
-/* check if pointer contained in allocation */
-static bool pointer_contained_in_allocation(memtools_memory_allocation* allocation, void* ptr){
-  return ((uint8_t*)ptr >= allocation->memstart) && ((uint8_t*)ptr <= allocation->memstart + allocation->n);
-}
-
-/* return either allocation containing ptr or NULL if ptr is invalid */
-static memtools_memory_allocation* get_allocation_for_pointer(void* ptr){
-  memtools_memory_allocation *curr;
-
-  for(curr = memory_allocations; curr != memory_allocations + n_allocations; ++curr){
-    if(pointer_contained_in_allocation(curr, ptr)){
-      return curr;
-    }
-  }
-
-  return NULL;
-}
-
-/* malloc w/ 64 bit header and footer */
-static inline void over_malloc(size_t n, memtools_memory_allocation* curr){
-  /* ensure footer is 64-bit aligned */
-  unsigned long aligned_n = n + (n&7);
-  curr->memstart = malloc(aligned_n + sizeof(uint64_t)*2) + sizeof(uint64_t);
-  curr->n = n;
-
-  /* write magic number to header and footer */
-  *(((uint64_t*)curr->memstart) - 1) = MAGIC_NUMBER;
-  *((uint64_t*)(curr->memstart + aligned_n)) = MAGIC_NUMBER;
 }
 
 /* memtools version of malloc */
@@ -86,38 +49,36 @@ void* memtools_malloc(size_t n, unsigned int line, char* file){
   pthread_mutex_lock(&memory_allocations_lock);
 
   /* add more memory for new malloc */
-  ++n_allocations;
-  memory_allocations = realloc(memory_allocations, (sizeof *memory_allocations)*n_allocations);
-  memtools_memory_allocation* curr = memory_allocations + n_allocations - 1;
+  memtools_allocation* new = memtools_memory_interface_add_allocation(&memory_interface, n);
 
   /* initialize current allocation */
-  curr->line = line;
-  curr->file = file;
-  curr->alloc_type = ALLOC_TYPE_MALLOC;
-  curr->comments = NULL;
-  curr->n_comments = 0;
-  over_malloc(n, curr);
+  new->line = line;
+  new->file = file;
+  new->alloc_type = ALLOC_TYPE_MALLOC;
+  new->comments = NULL;
+  new->n_comments = 0;
   total_allocated_bytes += n;
+  n_allocations += 1;
   pthread_mutex_unlock(&memory_allocations_lock);
 
-  return curr->memstart;
+  return new->memstart;
 }
 
 /* add a comment to current memory allocation */
 void memtools_memory_comment(void* ptr, char* fmt, ...){
-  memtools_memory_allocation* curr; 
+  memtools_allocation* curr; 
   int n;
   char *buffer;
   va_list args1, args2;
 
   pthread_mutex_lock(&memory_allocations_lock);
-  curr = get_allocation_for_pointer(ptr);
+  curr = memtools_memory_interface_get_allocation_for_pointer(memory_interface, ptr);
   if(!curr){
     print_wrapped("Tried to comment on pointer at %p but pointer was invalid.\n", ptr);
     exit(0);
   }
 
-  /* nitialize 2 va_list in case we need to call vsnprintf again if
+  /* initialize 2 va_list in case we need to call vsnprintf again if
    * the buffer is too small */
   va_start(args1, fmt);
   va_copy(args2, args1);
@@ -143,10 +104,10 @@ void memtools_memory_comment(void* ptr, char* fmt, ...){
 
 /* check if ptr is in any of the current allocations */
 bool memtools_is_valid_pointer(void* ptr){
-  memtools_memory_allocation* curr; 
+  memtools_allocation* curr; 
 
   pthread_mutex_lock(&memory_allocations_lock);
-  curr = get_allocation_for_pointer(ptr);
+  curr = memtools_memory_interface_get_allocation_for_pointer(memory_interface, ptr);
   pthread_mutex_unlock(&memory_allocations_lock);
 
   /* curr will either be NULL or non-null. If it's NULL 
@@ -157,11 +118,11 @@ bool memtools_is_valid_pointer(void* ptr){
 
 /* check if the allocation containing ptr has been violated */
 bool memtools_has_memory_been_violated(void* ptr){
-  memtools_memory_allocation* curr; 
+  memtools_allocation* curr; 
   bool has_memory_been_violated;
 
   pthread_mutex_lock(&memory_allocations_lock);
-  curr = get_allocation_for_pointer(ptr);
+  curr = memtools_memory_interface_get_allocation_for_pointer(memory_interface, ptr);
   if(!curr){
     print_wrapped("Tried to violation check pointer at %p but pointer was invalid.\n", ptr);
     exit(0);
@@ -173,15 +134,15 @@ bool memtools_has_memory_been_violated(void* ptr){
   return has_memory_been_violated;
 }
 
-/* print memtools_memory_allocation struct */
-static void print_allocation(memtools_memory_allocation* allocation){
+/* print memtools_allocation struct */
+static void print_allocation(memtools_allocation* allocation){
   char** comment;
-  print_wrapped("%s:%zu bytes allocated at %p allocated in file %s at line %d\n", 
+  print_wrapped("%s:%zu bytes allocated at %p in file %s at line %d\n", 
         allocation->alloc_type, allocation->n, allocation->memstart + allocation->n,
         allocation->file, allocation->line);
 
   if(allocation_has_been_violated(allocation)){
-    printf("\t %s! MEMORY HAS BEEN VIOLATED !%s\n", "\033[31m", "\033[0m");
+    printf("\t %s!!MEMORY HAS BEEN VIOLATED!!%s\n", "\033[31m", "\033[0m");
   }
   for(comment = allocation->comments; comment != allocation->comments + allocation->n_comments; ++comment){
     printf("\t(%s)\n", *comment);
@@ -192,28 +153,32 @@ static void print_allocation(memtools_memory_allocation* allocation){
 void memtools_print_allocated(){
   pthread_mutex_lock(&memory_allocations_lock);
   print_wrapped("allocated %zu bytes in %d blocks\n", total_allocated_bytes, n_allocations);
-  memtools_memory_allocation* curr = memory_allocations;
-  if(!curr){
-    pthread_mutex_unlock(&memory_allocations_lock);
-    return;
-  }
-  for(; curr != memory_allocations + n_allocations; print_allocation(curr++));
-
+  memtools_memory_interface_for_each(memory_interface, &print_allocation);
   pthread_mutex_unlock(&memory_allocations_lock);
 }
 
 /* memtools version of free */
 void memtools_free(void* ptr, unsigned line, char* file){
-  memtools_memory_allocation* curr; 
-  int i;
-  bool is_valid_ptr = false;
-  char **comment;
-
+  memtools_free_info retval;
+  
   if(!ptr){
     return;    
   }
 
   pthread_mutex_lock(&memory_allocations_lock);
+  retval = memtools_memory_interface_destroy_allocation_by_pointer(&memory_interface, ptr);
+  if(!retval.is_valid_ptr){
+    print_wrapped("Tried to free pointer at %p in %s at %d but pointer was invalid\n", ptr, file, line);
+    exit(0);
+  } 
+  if(retval.shifted_ptr){
+    print_wrapped("Warning - freeing memory in %s at %d with shifted pointer (pointer value should be %p but is %p)\n", 
+                  file, line, retval.memstart, ptr);
+  }
+
+  n_allocations -= 1;
+  total_allocated_bytes -= retval.n_bytes;
+  #if 0
   /* we can't use get_allocation_for pointer because we need 
    * the block index to erase the block from the array. */
   for(i = 0, curr = memory_allocations; curr != memory_allocations + n_allocations; ++curr, ++i){
@@ -248,11 +213,12 @@ void memtools_free(void* ptr, unsigned line, char* file){
   }
   --n_allocations;
   memory_allocations = realloc(memory_allocations, (sizeof *memory_allocations)*n_allocations);
+  #endif
   pthread_mutex_unlock(&memory_allocations_lock);
 }
 
 /* realloc with 64 bit header and footer */
-static inline void over_realloc(size_t n, memtools_memory_allocation* curr){
+static inline void over_realloc(size_t n, memtools_allocation* curr){
   unsigned long aligned_n = n + (n&7);
   curr->memstart = realloc(curr->memstart - sizeof(uint64_t), aligned_n + sizeof(uint64_t)*2) + sizeof(uint64_t);
   curr->n = n;
@@ -263,7 +229,7 @@ static inline void over_realloc(size_t n, memtools_memory_allocation* curr){
 
 /* memtools version of realloc */
 void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
-  memtools_memory_allocation* curr; 
+  memtools_allocation* curr; 
 
   /* since you can use realloc as malloc if ptr is
    * NULL, we'll just use malloc for that. The only 
@@ -277,7 +243,7 @@ void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
   }
 
   pthread_mutex_lock(&memory_allocations_lock);
-  curr = get_allocation_for_pointer(ptr);
+  curr = memtools_memory_interface_get_allocation_for_pointer(memory_interface, ptr);
   if(!curr){
     print_wrapped("Tried to realloc pointer at %p in file %s at line %d but pointer was invalid.\n", ptr, file, line);
     exit(0);
@@ -335,17 +301,19 @@ static void comment_copy(char **dest, char *src){
 }
 
 void memtools_memory_comment_copy(void* dest_block, void* src_block){
-  memtools_memory_allocation *dest_allocation, *src_allocation;
+  memtools_allocation *dest_allocation, *src_allocation;
   int n_original_comments;
   char **dest_comment, **src_comment;
 
-  src_allocation = get_allocation_for_pointer(src_block);
+  //src_allocation = get_allocation_for_pointer(src_block);
+  src_allocation = memtools_memory_interface_get_allocation_for_pointer(memory_interface, src_block);
   if(!src_allocation){
     print_wrapped("Tried to copy comments from pointer at %p but pointer was invalid.\n", src_block);
     exit(0);
   }
 
-  dest_allocation = get_allocation_for_pointer(dest_block);
+  //dest_allocation = get_allocation_for_pointer(dest_block);
+  dest_allocation = memtools_memory_interface_get_allocation_for_pointer(memory_interface, dest_block);
   if(!dest_allocation){
     print_wrapped("Tried to copy comments from pointer at %p to pointer at %p but destination pointer was invalid.\n", 
                   src_block, dest_block);

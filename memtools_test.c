@@ -30,7 +30,7 @@ int main(){
 
   data3 = malloc((sizeof *data3)*10);
   data3[10] = 0;
-  memcomment(data3, "Purposefully violating memory LIKE A BOSS");
+  memcomment(data3, "Purposefully violating memory");
   memviolated(data3, "I purposely violated this memory!");
 
   data2 = realloc(data2, ((sizeof *data2)*50));
