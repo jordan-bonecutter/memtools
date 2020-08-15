@@ -65,7 +65,7 @@ memtools_allocation* memtools_memory_interface_add_allocation(memtools_memory_in
 }
 
 static bool pointer_contained_in_allocation(memtools_allocation* allocation, void* ptr){
-  return ((uint8_t*)ptr >= allocation->memstart) && ((uint8_t*)ptr <= allocation->memstart + allocation->n);
+  return ((uint8_t*)ptr >= allocation->memstart) && ((uint8_t*)ptr <= allocation->memstart + allocation->n - 1);
 }
 
 memtools_allocation* memtools_memory_interface_get_allocation_for_pointer(memtools_memory_interface* interface, void* p){
