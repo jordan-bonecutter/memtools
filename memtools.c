@@ -242,6 +242,11 @@ void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file){
     return memtools_malloc(n, line, file);
   }
 
+  if(n == 0){
+    memtools_free(ptr, line, file);
+    return NULL;
+  }
+
   pthread_mutex_lock(&memory_allocations_lock);
   curr = memtools_memory_interface_get_allocation_for_pointer(memory_interface, ptr);
   if(!curr){
