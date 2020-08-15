@@ -22,6 +22,7 @@ int main(){
 
   data2 = malloc((sizeof *data2)*100);
   memcomment(data2, "I allocated this data at %d", (int)clock());
+  memcomment_copy(data2, data1);
   strncpy(data2, "hello world!", 100);
   
   memtest(NULL, "This should fail, I'm testing NULL");
@@ -36,7 +37,7 @@ int main(){
   data2 = realloc(data2, ((sizeof *data2)*50));
 
   memprint();
-  free(data1);
+  free(data1+1);
   free(data2);
   free(data3);
   memprint();
