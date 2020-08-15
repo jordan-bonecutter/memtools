@@ -20,6 +20,9 @@
 
 char ALLOC_TYPE_MALLOC[]  = "malloc ";
 char ALLOC_TYPE_REALLOC[] = "realloc";
+char ALLOC_TYPE_STRDUP[]  = "strdup";
+char ALLOC_TYPE_STRNDUP[] = "strndup";
+char ALLOC_TYPE_CALLOC[]  = "calloc";
 
 /* allocated memory data structure */
 /* TODO: convert this to a binary tree for fatser lookup */
@@ -334,5 +337,75 @@ void memtools_memory_comment_copy(void* dest_block, void* src_block){
       ++src_comment, ++dest_comment){
     comment_copy(dest_comment, *src_comment);
   }
+}
+
+void* memtools_strdup(char* str, unsigned int line, char* file){
+  int slen;
+  pthread_mutex_lock(&memory_allocations_lock);
+
+  slen = strlen(str);
+
+  /* add more memory for new malloc */
+  memtools_allocation* new = memtools_memory_interface_add_allocation(&memory_interface, (sizeof(char)*(slen+1)));
+  
+  strncpy((char*)new->memstart, str, (slen+1));
+
+  /* initialize current allocation */
+  new->line = line;
+  new->file = file;
+  new->alloc_type = ALLOC_TYPE_STRDUP;
+  new->comments = NULL;
+  new->n_comments = 0;
+  total_allocated_bytes += sizeof(char)*(slen + 1);
+  n_allocations += 1;
+  pthread_mutex_unlock(&memory_allocations_lock);
+
+  return new->memstart;
+}
+
+void* memtools_strndup(char* str, unsigned int n, unsigned int line, char* file){
+  int slen;
+  pthread_mutex_lock(&memory_allocations_lock);
+
+  slen = strlen(str);
+  slen = slen > n ? n : slen;
+
+  /* add more memory for new malloc */
+  memtools_allocation* new = memtools_memory_interface_add_allocation(&memory_interface, (sizeof(char)*(slen+1)));
+  
+  strncpy((char*)new->memstart, str, (slen));
+
+  /* initialize current allocation */
+  new->line = line;
+  new->file = file;
+  new->alloc_type = ALLOC_TYPE_STRNDUP;
+  new->comments = NULL;
+  new->n_comments = 0;
+  total_allocated_bytes += sizeof(char)*(slen + 1);
+  n_allocations += 1;
+  pthread_mutex_unlock(&memory_allocations_lock);
+
+  return new->memstart;
+}
+
+/* memtools version of malloc */
+void* memtools_calloc(unsigned int n, size_t m, unsigned int line, char* file){
+  pthread_mutex_lock(&memory_allocations_lock);
+
+  /* add more memory for new malloc */
+  memtools_allocation* new = memtools_memory_interface_add_allocation(&memory_interface, n*m);
+  memset(new->memstart, 0, n*m);
+
+  /* initialize current allocation */
+  new->line = line;
+  new->file = file;
+  new->alloc_type = ALLOC_TYPE_CALLOC;
+  new->comments = NULL;
+  new->n_comments = 0;
+  total_allocated_bytes += n*m;
+  n_allocations += 1;
+  pthread_mutex_unlock(&memory_allocations_lock);
+
+  return new->memstart;
 }
 

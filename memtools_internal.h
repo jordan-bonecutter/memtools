@@ -16,6 +16,9 @@
 void* memtools_malloc (size_t n, unsigned int line, char* file);/* Version of malloc which keeps track of line & file where memory was allocated */
 void  memtools_free(void* ptr, unsigned int line, char* file); /* Version of free which keeps track of line and file where memory was deallocated */
 void* memtools_realloc(void* ptr, size_t n, unsigned int line, char* file); /* Version of realloc which keeps track of line and file where memory was reallocated */
+void* memtools_strdup(char* str, unsigned int line, char* file); /* Version of strdup which keeps track of line and file where memory was allocated*/
+void* memtools_strndup(char* str, size_t n, unsigned int line, char* file); /* Version of strndup which keeps track of line and file where memroy was allocated*/
+void* memtools_calloc(size_t n, size_t m, unsigned int line, char* file); /* Version of calloc which keeps track of line and file where memory was allocated*/
 
 void memtools_print_allocated(); /* print all currently allocated memory */
 bool memtools_has_memory_been_violated(void* ptr); /* check if any over allocated segments are corrupted */

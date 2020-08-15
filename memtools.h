@@ -18,6 +18,9 @@
     #define malloc(n)     memtools_malloc (n, __LINE__, (char*)__FILE__)
     #define free(p)       memtools_free   (p, __LINE__, (char*)__FILE__)
     #define realloc(p, n) memtools_realloc(p, n, __LINE__, (char*)__FILE__)
+    #define strdup(s)     memtools_strdup (s, __LINE__, (char*)__FILE__)
+    #define strndup(s, n) memtools_strndup(s, n, __LINE__, (char*)__FILE__)
+    #define calloc(m, n)  memtools_calloc (m, n, __LINE__, (char*)__FILE__)
 
     #define memprint()           memtools_print_allocated()
     #define memcomment(p, ...)   memtools_memory_comment(p, __VA_ARGS__)
