@@ -23,7 +23,7 @@ While memtools could indeed provide the above functionality (and does if you wan
 process, only creating further headaches. memtools is not built like this because it is better to fix code at compile time rather than at run time. This means 
 that writing code trying to fix other code is a terrible idea, and you really shouldn't do it. The other reason is that you want to be able to turn off memtools 
 when it's time to compile the production version of your code (memtools introduces non-trivial overhead that is acceptable for debugging but would likely 
-make you customers sad). With the above code, it's not clear what part of it should be turned off for production, so that makes it even more messy!
+make your customers sad). With the above code, it's not clear what part of it should be turned off for production, so that makes it even more messy!
 
 Ok, so you know how not to use memtools, so how should you use it? First, I'll explain what each tool does and then we'll look at some examples.
 
