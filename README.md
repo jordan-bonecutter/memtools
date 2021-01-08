@@ -64,6 +64,6 @@ that I have a memory leak somewhere in my code (and it will tell me where!).
 
 ## Plans for the future
 
-Right now, memtools uses an aray to hold all the allocations which is not ideal for search. I plan to move to a binary tree where the integer value of the pointer
+Right now, memtools uses an array to hold all the allocations which is not ideal for search. I plan to move to a binary tree where the integer value of the pointer
 is used as its key. This should provide a much faster lookup time (for large amounts of allocations). I would also like to support multiple comments and comment
 deletion for memory allocations (though I'm not quite sure how to move forward from a user standpoint here). If you'd like to help contribute, please contact me!
