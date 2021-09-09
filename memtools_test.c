@@ -7,6 +7,7 @@
 #include "memtools.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <assert.h>
 
@@ -27,7 +28,7 @@ int main(){
   memcomment(data2, "I allocated this data at %d", (int)clock());
   memcomment_copy(data2, data1);
   strncpy(data2, "hello world!", 100);
-  
+
   memtest(NULL, "This should fail, I'm testing NULL");
 
   memtest(data2 + 3, "This shouldn't fail, I'm testing allocated memory");

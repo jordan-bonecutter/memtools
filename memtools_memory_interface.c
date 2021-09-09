@@ -4,6 +4,7 @@
 /* jordan bonecutter * * * * * * * * * * * * * * * * * * * * * * * * */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
@@ -55,7 +56,7 @@ memtools_allocation* memtools_memory_interface_add_allocation(memtools_memory_in
     interface_cache->allocations = malloc(sizeof *interface_cache->allocations);
   } else {
     interface_cache = *interface;
-    interface_cache->allocations = realloc(interface_cache->allocations, 
+    interface_cache->allocations = realloc(interface_cache->allocations,
                                           (sizeof *interface_cache->allocations)*(interface_cache->n_allocations + 1));
     ++interface_cache->n_allocations;
   }
@@ -98,8 +99,8 @@ memtools_memory_interface_destroy_allocation_by_pointer(memtools_memory_interfac
   if(!interface){
     return ret;
   }
-  for(i = 0, iterator = interface_cache->allocations; 
-      iterator != interface_cache->allocations + interface_cache->n_allocations; 
+  for(i = 0, iterator = interface_cache->allocations;
+      iterator != interface_cache->allocations + interface_cache->n_allocations;
       ++iterator, ++i)
   {
     if(pointer_contained_in_allocation(iterator, ptr)){
@@ -118,7 +119,7 @@ memtools_memory_interface_destroy_allocation_by_pointer(memtools_memory_interfac
   ret.memstart = iterator->memstart;
   ret.n_bytes = iterator->n;
   free(iterator->memstart - sizeof(uint64_t));
-   
+
   for(comment = iterator->comments; comment != iterator->comments + iterator->n_comments; ++comment){
     free(*comment);
   }
@@ -135,7 +136,7 @@ memtools_memory_interface_destroy_allocation_by_pointer(memtools_memory_interfac
     free(*interface);
     *interface = NULL;
   } else {
-    interface_cache->allocations = realloc(interface_cache->allocations, 
+    interface_cache->allocations = realloc(interface_cache->allocations,
                         (sizeof **interface) + (sizeof *(*interface)->allocations)*(*interface)->n_allocations);
   }
 
@@ -148,7 +149,7 @@ void memtools_memory_interface_for_each(memtools_memory_interface *interface, vo
   if(!interface){
     return;
   }
-  
+
   for(iterator = interface->allocations; iterator != interface->allocations + interface->n_allocations; ++iterator){
     for_each(iterator);
   }
